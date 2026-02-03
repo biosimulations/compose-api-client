@@ -23,6 +23,7 @@ git add --all
 git commit -m "Release Version: ${NEW_VERSION}"
 git tag -a ${NEW_VERSION} -m "Release version: ${NEW_VERSION}"
 git push origin ${NEW_VERSION}
+git push --tags
 git push
 
 TOKEN=${PYPI_TOKEN-"nope"}
