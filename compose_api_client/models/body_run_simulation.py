@@ -30,9 +30,11 @@ class BodyRunSimulation:
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "uploaded_file": uploaded_file,
-        })
+        field_dict.update(
+            {
+                "uploaded_file": uploaded_file,
+            }
+        )
 
         return field_dict
 
