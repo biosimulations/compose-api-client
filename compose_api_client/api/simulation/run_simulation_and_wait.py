@@ -1,24 +1,25 @@
-import logging
-from typing import Tuple, Any
+import asyncio
+from typing import Any, Tuple
 
 from compose_api_client import Client
 from compose_api_client.api.results import (
-    get_simulation_status,
     get_simulation_results_file,
+    get_simulation_status,
 )
 from compose_api_client.api.simulation import run_simulation
 from compose_api_client.models import (
     BodyRunSimulation,
-    SimulationExperiment,
     HpcRun,
-    JobStatus,
     HTTPValidationError,
+    JobStatus,
+    SimulationExperiment,
 )
 from compose_api_client.types import File, Response
-import asyncio
+
 
 def _hpc_not_type_err_msg(current_status: Any) -> str:
     return f"Expected type of HpcRun when getting simulation status, instead got {type(current_status)}: {current_status}"
+
 
 async def async_call(
     experiment_file: File, client: Client, seconds_to_wait: int = 10 * 60
@@ -28,7 +29,9 @@ async def async_call(
     )
 
     if not isinstance(sim_experiment, SimulationExperiment):
-        raise TypeError(f"Expected type of SimulationExperiment, instead got {type(sim_experiment)}: {sim_experiment}")
+        raise TypeError(
+            f"Expected type of SimulationExperiment, instead got {type(sim_experiment)}: {sim_experiment}"
+        )
 
     current_status = await get_simulation_status.asyncio(
         client=client, simulation_id=sim_experiment.simulation_database_id
@@ -36,13 +39,15 @@ async def async_call(
 
     num_loops = 0
     while current_status is None and num_loops < 10:
-        print(f"Waiting for simulation to be submitted to slurm.")
+        print("Waiting for simulation to be submitted to slurm.")
         await asyncio.sleep(2)
         current_status = await get_simulation_status.asyncio(
             client=client, simulation_id=sim_experiment.simulation_database_id
         )
 
-    if not isinstance(current_status, HpcRun) or not isinstance(current_status.status, JobStatus):
+    if not isinstance(current_status, HpcRun) or not isinstance(
+        current_status.status, JobStatus
+    ):
         raise TypeError(_hpc_not_type_err_msg(current_status))
 
     num_loops = 0
