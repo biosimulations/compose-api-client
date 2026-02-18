@@ -8,18 +8,26 @@ from ...client import AuthenticatedClient, Client
 from ...models.body_run_simulation import BodyRunSimulation
 from ...models.http_validation_error import HTTPValidationError
 from ...models.simulation_experiment import SimulationExperiment
-from ...types import Response
+from ...types import UNSET, Response, Unset
 
 
 def _get_kwargs(
     *,
     body: BodyRunSimulation,
+    interval_time: Union[Unset, float] = 1.0,
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+
+    params: dict[str, Any] = {}
+
+    params["interval_time"] = interval_time
+
+    params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
 
     _kwargs: dict[str, Any] = {
         "method": "post",
         "url": "/simulation/run",
+        "params": params,
     }
 
     _kwargs["files"] = body.to_multipart()
@@ -60,10 +68,12 @@ def sync_detailed(
     *,
     client: Union[AuthenticatedClient, Client],
     body: BodyRunSimulation,
+    interval_time: Union[Unset, float] = 1.0,
 ) -> Response[Union[HTTPValidationError, SimulationExperiment]]:
     """Run a simulation
 
     Args:
+        interval_time (Union[Unset, float]):  Default: 1.0.
         body (BodyRunSimulation):
 
     Raises:
@@ -76,6 +86,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+        interval_time=interval_time,
     )
 
     response = client.get_httpx_client().request(
@@ -89,10 +100,12 @@ def sync(
     *,
     client: Union[AuthenticatedClient, Client],
     body: BodyRunSimulation,
+    interval_time: Union[Unset, float] = 1.0,
 ) -> Optional[Union[HTTPValidationError, SimulationExperiment]]:
     """Run a simulation
 
     Args:
+        interval_time (Union[Unset, float]):  Default: 1.0.
         body (BodyRunSimulation):
 
     Raises:
@@ -106,6 +119,7 @@ def sync(
     return sync_detailed(
         client=client,
         body=body,
+        interval_time=interval_time,
     ).parsed
 
 
@@ -113,10 +127,12 @@ async def asyncio_detailed(
     *,
     client: Union[AuthenticatedClient, Client],
     body: BodyRunSimulation,
+    interval_time: Union[Unset, float] = 1.0,
 ) -> Response[Union[HTTPValidationError, SimulationExperiment]]:
     """Run a simulation
 
     Args:
+        interval_time (Union[Unset, float]):  Default: 1.0.
         body (BodyRunSimulation):
 
     Raises:
@@ -129,6 +145,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+        interval_time=interval_time,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -140,10 +157,12 @@ async def asyncio(
     *,
     client: Union[AuthenticatedClient, Client],
     body: BodyRunSimulation,
+    interval_time: Union[Unset, float] = 1.0,
 ) -> Optional[Union[HTTPValidationError, SimulationExperiment]]:
     """Run a simulation
 
     Args:
+        interval_time (Union[Unset, float]):  Default: 1.0.
         body (BodyRunSimulation):
 
     Raises:
@@ -158,5 +177,6 @@ async def asyncio(
         await asyncio_detailed(
             client=client,
             body=body,
+            interval_time=interval_time,
         )
     ).parsed
