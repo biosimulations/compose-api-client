@@ -22,10 +22,12 @@ def _hpc_not_type_err_msg(current_status: Any) -> str:
 
 
 async def async_call(
-    experiment_file: File, client: Client, seconds_to_wait: int = 10 * 60
+    experiment_file: File, client: Client, interval: float = 1.0, seconds_to_wait: int = 10 * 60
 ) -> Tuple[Response[HTTPValidationError], SimulationExperiment]:
     sim_experiment = await run_simulation.asyncio(
-        client=client, body=BodyRunSimulation(uploaded_file=experiment_file)
+        client=client,
+        interval_time=interval,
+        body=BodyRunSimulation(uploaded_file=experiment_file)
     )
 
     if not isinstance(sim_experiment, SimulationExperiment):
