@@ -21,7 +21,8 @@ async def _get_current_status(client: Client, simulation_id: int) -> HpcRun:
     response = await get_simulation_status.asyncio_detailed(
         client=client, simulation_id=simulation_id
     )
-    if response.status_code != 200 or response.parsed is None:
+    # Allow 404, since it means simulation has not been submitted to SLURM
+    if (response.status_code != 200 and response.status_code != 404 ) or response.parsed is None:
         raise RuntimeError(
             f"Could not get status for simulation id {simulation_id}. Response {response.status_code}: {response.content}"
         )
@@ -56,9 +57,7 @@ async def async_call(
     while current_status is None and num_loops < loops_to_wait:
         print("Waiting for simulation to be submitted to slurm.")
         await asyncio.sleep(sleep_interval)
-        current_status = await get_simulation_status.asyncio(
-            client=client, simulation_id=sim_experiment.simulation_database_id
-        )
+        current_status = _get_current_status(client, sim_experiment.simulation_database_id)
         num_loops += 1
 
     if current_status is None:
