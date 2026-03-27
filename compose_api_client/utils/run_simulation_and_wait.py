@@ -22,7 +22,7 @@ async def _get_current_status(client: Client, simulation_id: int) -> HpcRun:
         client=client, simulation_id=simulation_id
     )
     # Allow 404, since it means simulation has not been submitted to SLURM
-    if (response.status_code != 200 and response.status_code != 404 ) or response.parsed is None:
+    if response.status_code != 200 and response.status_code != 404:
         raise RuntimeError(
             f"Could not get status for simulation id {simulation_id}. Response {response.status_code}: {response.content}"
         )
