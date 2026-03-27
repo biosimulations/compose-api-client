@@ -17,8 +17,15 @@ from compose_api_client.models import (
 from compose_api_client.types import File, Response
 
 
-def _hpc_not_type_err_msg(current_status: Any) -> str:
-    return f"Expected type of HpcRun when getting simulation status, instead got {type(current_status)}: {current_status}"
+async def _get_current_status(client: Client, simulation_id: int) -> HpcRun:
+    response = await get_simulation_status.asyncio_detailed(
+        client=client, simulation_id=simulation_id
+    )
+    if response.status_code != 200 or response.parsed is None:
+        raise RuntimeError(
+            f"Could not get status for simulation id {simulation_id}. Response {response.status_code}: {response.content}"
+        )
+    return response.parsed
 
 
 sleep_interval = 2
@@ -30,49 +37,44 @@ async def async_call(
     interval: float = 1.0,
     seconds_to_wait: int = 10 * 60,
 ) -> Tuple[Response[HTTPValidationError], SimulationExperiment]:
-    sim_experiment = await run_simulation.asyncio(
+    response = await run_simulation.asyncio_detailed(
         client=client,
         interval_time=interval,
         body=BodyRunSimulation(uploaded_file=experiment_file),
     )
-
-    if not isinstance(sim_experiment, SimulationExperiment):
-        raise TypeError(
-            f"Expected type of SimulationExperiment, instead got {type(sim_experiment)}: {sim_experiment}"
+    sim_experiment = response.parsed
+    if response.status_code != 200 or response.parsed is None:
+        raise RuntimeError(
+            f"Simulation submission failed, {response.status_code}: {response.content}"
         )
 
-    current_status = await get_simulation_status.asyncio(
-        client=client, simulation_id=sim_experiment.simulation_database_id
+    current_status = await _get_current_status(
+        client, sim_experiment.simulation_database_id
     )
-
     num_loops = 0
-    while current_status is None and num_loops < 10:
+    loops_to_wait = seconds_to_wait / sleep_interval
+    while current_status is None and num_loops < loops_to_wait:
         print("Waiting for simulation to be submitted to slurm.")
-        await asyncio.sleep(sleep_interval)
-        current_status = await get_simulation_status.asyncio(
-            client=client, simulation_id=sim_experiment.simulation_database_id
-        )
-
-    if not isinstance(current_status, HpcRun) or not isinstance(
-        current_status.status, JobStatus
-    ):
-        raise TypeError(_hpc_not_type_err_msg(current_status))
-
-    print("Simulation has been submitted to slurm.")
-    num_loops = 0
-    while current_status.status != JobStatus.COMPLETED and num_loops < (
-        seconds_to_wait / sleep_interval
-    ):
         await asyncio.sleep(sleep_interval)
         current_status = await get_simulation_status.asyncio(
             client=client, simulation_id=sim_experiment.simulation_database_id
         )
         num_loops += 1
 
-        if not isinstance(current_status, HpcRun) or not isinstance(
-            current_status.status, JobStatus
-        ):
-            raise TypeError(_hpc_not_type_err_msg(current_status))
+    if current_status is None:
+        raise RuntimeError(
+            f"Simulation has still not been submitted to slurm, and client wait time of {sleep_interval * loops_to_wait} seconds expired."
+        )
+
+    print("Simulation has been submitted to slurm.")
+    num_loops = 0
+    while current_status.status != JobStatus.COMPLETED and num_loops < loops_to_wait:
+        await asyncio.sleep(sleep_interval)
+        current_status = await _get_current_status(
+            client, sim_experiment.simulation_database_id
+        )
+        num_loops += 1
+
         if current_status.status == JobStatus.FAILED:
             raise RuntimeError(f"Simulation failed: {current_status}")
 
@@ -80,15 +82,9 @@ async def async_call(
             f"Waited {num_loops * sleep_interval} seconds for simulation to complete. Current status: {current_status}"
         )
 
-    current_status = await get_simulation_status.asyncio(
-        client=client, simulation_id=sim_experiment.simulation_database_id
+    current_status = await _get_current_status(
+        client, sim_experiment.simulation_database_id
     )
-
-    if not isinstance(current_status, HpcRun) or not isinstance(
-        current_status.status, JobStatus
-    ):
-        raise TypeError(_hpc_not_type_err_msg(current_status))
-
     if current_status.status != JobStatus.COMPLETED:
         raise RuntimeError(f"Simulation has not completed: {current_status}")
 
