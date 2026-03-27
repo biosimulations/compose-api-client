@@ -57,7 +57,7 @@ async def async_call(
     while current_status is None and num_loops < loops_to_wait:
         print("Waiting for simulation to be submitted to slurm.")
         await asyncio.sleep(sleep_interval)
-        current_status = _get_current_status(client, sim_experiment.simulation_database_id)
+        current_status = await _get_current_status(client, sim_experiment.simulation_database_id)
         num_loops += 1
 
     if current_status is None:
