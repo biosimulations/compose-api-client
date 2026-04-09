@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, Tuple
+from typing import Tuple
 
 from compose_api_client import Client
 from compose_api_client.api.results import (
@@ -57,7 +57,9 @@ async def async_call(
     while current_status is None and num_loops < loops_to_wait:
         print("Waiting for simulation to be submitted to slurm.")
         await asyncio.sleep(sleep_interval)
-        current_status = await _get_current_status(client, sim_experiment.simulation_database_id)
+        current_status = await _get_current_status(
+            client, sim_experiment.simulation_database_id
+        )
         num_loops += 1
 
     if current_status is None:
@@ -74,8 +76,14 @@ async def async_call(
         )
         num_loops += 1
 
-        if current_status.status == JobStatus.FAILED:
-            raise RuntimeError(f"Simulation failed: {current_status}")
+        incomplete_statuses = {
+            JobStatus.FAILED,
+            JobStatus.CANCELLED,
+            JobStatus.TIMEOUT,
+            JobStatus.OUT_OF_MEMORY,
+        }
+        if current_status.status in incomplete_statuses:
+            raise RuntimeError(f"Simulation stopped with status: {current_status}")
 
         print(
             f"Waited {num_loops * sleep_interval} seconds for simulation to complete. Current status: {current_status}"
@@ -93,7 +101,7 @@ async def async_call(
         client=client, simulation_id=sim_experiment.simulation_database_id
     )
 
-    print(f"Simulation has completed.")
+    print("Simulation has completed.")
 
     if results.status_code != 200:
         raise RuntimeError(f"Could not get simulation results: {results}")
